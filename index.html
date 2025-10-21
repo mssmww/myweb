@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐类型数据可视化分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #6c5ce7;
+            --secondary-color: #a29bfe;
+            --accent-color: #fd79a8;
+            --dark-color: #2d3436;
+            --light-color: #f5f6fa;
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .btn {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 0.7rem 1.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            color: var(--dark-color);
+            opacity: 0.7;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+            text-align: center;
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .ranking-table th, .ranking-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .ranking-table th {
+            background-color: var(--light-color);
+            font-weight: 600;
+        }
+        
+        .ranking-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .rank {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            line-height: 25px;
+            text-align: center;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            margin-right: 10px;
+        }
+        
+        .genre-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background-color: var(--light-color);
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background-color: var(--dark-color);
+            color: white;
+            margin-top: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-card {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>音乐类型数据分析</h1>
+        <p class="subtitle">探索不同音乐类型的流行度、点击量和占比趋势</p>
+    </header>
+    
+    <div class="container">
+        <div class="controls">
+            <button class="btn active" data-view="all">全部数据</button>
+            <button class="btn" data-view="trending">热门趋势</button>
+            <button class="btn" data-view="genres">类型分布</button>
+            <button class="btn" data-view="history">历史数据</button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">总点击量</div>
+                <div class="stat-value">1,258,743</div>
+                <div class="stat-label">次播放</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">音乐类型</div>
+                <div class="stat-value">18</div>
+                <div class="stat-label">种</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">最受欢迎</div>
+                <div class="stat-value">流行乐</div>
+                <div class="stat-label">占比 24.5%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">月增长率</div>
+                <div class="stat-value">+12.8%</div>
+                <div class="stat-label">较上月</div>
+            </div>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-card">
+                <h2 class="chart-title">音乐类型点击量占比</h2>
+                <canvas id="genrePieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2 class="chart-title">月度点击量趋势</h2>
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2 class="chart-title">音乐类型点击量排行</h2>
+                <canvas id="genreBarChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2 class="chart-title">用户年龄分布</h2>
+                <canvas id="ageDistributionChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <h2 class="chart-title">音乐类型排行榜</h2>
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>音乐类型</th>
+                        <th>点击量</th>
+                        <th>占比</th>
+                        <th>增长趋势</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingTableBody">
+                    <!-- 排行榜数据将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <footer>
+        <p>© 2023 音乐数据分析平台 | 数据仅供参考</p>
+    </footer>
+
+    <script>
+        // 模拟数据
+        const musicData = {
+            genres: [
+                { name: "流行乐", clicks: 308000, color: "#6c5ce7" },
+                { name: "摇滚乐", clicks: 215000, color: "#fd79a8" },
+                { name: "电子乐", clicks: 187000, color: "#00cec9" },
+                { name: "嘻哈乐", clicks: 165000, color: "#fdcb6e" },
+                { name: "古典乐", clicks: 98000, color: "#e17055" },
+                { name: "爵士乐", clicks: 75000, color: "#a29bfe" },
+                { name: "民谣", clicks: 68000, color: "#55efc4" },
+                { name: "乡村乐", clicks: 52000, color: "#74b9ff" },
+                { name: "R&B", clicks: 48000, color: "#ff7675" },
+                { name: "金属乐", clicks: 45000, color: "#636e72" }
+            ],
+            monthlyTrends: {
+                labels: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+                datasets: [
+                    {
+                        label: "流行乐",
+                        data: [24500, 25800, 27200, 29000, 31200, 33500, 35200, 36800, 38500, 40200, 41800, 43000],
+                        borderColor: "#6c5ce7",
+                        backgroundColor: "rgba(108, 92, 231, 0.1)",
+                        tension: 0.4
+                    },
+                    {
+                        label: "摇滚乐",
+                        data: [18200, 19500, 20800, 22000, 23500, 24800, 26200, 27500, 28800, 30200, 31500, 32100],
+                        borderColor: "#fd79a8",
+                        backgroundColor: "rgba(253, 121, 168, 0.1)",
+                        tension: 0.4
+                    },
+                    {
+                        label: "电子乐",
+                        data: [15800, 16500, 17200, 18500, 19800, 21000, 22500, 23800, 25200, 26500, 27800, 28700],
+                        borderColor: "#00cec9",
+                        backgroundColor: "rgba(0, 206, 201, 0.1)",
+                        tension: 0.4
+                    }
+                ]
+            },
+            ageDistribution: {
+                labels: ["13-17岁", "18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上"],
+                datasets: [{
+                    label: "用户比例",
+                    data: [12, 28, 35, 15, 7, 3],
+                    backgroundColor: [
+                        "#6c5ce7", "#fd79a8", "#00cec9", "#fdcb6e", "#a29bfe", "#e17055"
+                    ]
+                }]
+            }
+        };
+
+        // 初始化图表
+        document.addEventListener('DOMContentLoaded', function() {
+            // 计算总点击量
+            const totalClicks = musicData.genres.reduce((sum, genre) => sum + genre.clicks, 0);
+            
+            // 生成排行榜表格数据
+            const rankingTableBody = document.getElementById('rankingTableBody');
+            musicData.genres.sort((a, b) => b.clicks - a.clicks);
+            
+            musicData.genres.forEach((genre, index) => {
+                const percentage = ((genre.clicks / totalClicks) * 100).toFixed(1);
+                const growth = (Math.random() * 20 - 5).toFixed(1); // 随机生成增长数据
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="rank">${index + 1}</span></td>
+                    <td>${genre.name}</td>
+                    <td>${genre.clicks.toLocaleString()}</td>
+                    <td>${percentage}%</td>
+                    <td>${growth > 0 ? '+' + growth : growth}%</td>
+                `;
+                rankingTableBody.appendChild(row);
+            });
+            
+            // 创建饼图
+            const pieCtx = document.getElementById('genrePieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: musicData.genres.map(g => g.name),
+                    datasets: [{
+                        data: musicData.genres.map(g => g.clicks),
+                        backgroundColor: musicData.genres.map(g => g.color),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = ((value / totalClicks) * 100).toFixed(1);
+                                    return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 创建月度趋势图
+            const trendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: musicData.monthlyTrends,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '点击量'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 创建柱状图
+            const barCtx = document.getElementById('genreBarChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: musicData.genres.map(g => g.name),
+                    datasets: [{
+                        label: '点击量',
+                        data: musicData.genres.map(g => g.clicks),
+                        backgroundColor: musicData.genres.map(g => g.color),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '点击量'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 创建年龄分布图
+            const ageCtx = document.getElementById('ageDistributionChart').getContext('2d');
+            new Chart(ageCtx, {
+                type: 'doughnut',
+                data: musicData.ageDistribution,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+            
+            // 添加按钮交互
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 这里可以添加切换视图的逻辑
+                    console.log(`切换到: ${this.dataset.view} 视图`);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
